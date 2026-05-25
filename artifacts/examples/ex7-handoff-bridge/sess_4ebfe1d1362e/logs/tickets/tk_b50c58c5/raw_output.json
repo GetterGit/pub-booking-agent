@@ -1,0 +1,22 @@
+[
+  {
+    "id": "sg_1",
+    "description": "Search for venues near Haymarket with party size 12 and budget up to \u00a32000",
+    "success_criterion": "venue_search tool call returns a response",
+    "estimated_tool_calls": 1,
+    "depends_on": [],
+    "assigned_half": "loop",
+    "status": "pending"
+  },
+  {
+    "id": "sg_2",
+    "description": "Hand off to structured half for booking confirmation with selected venue",
+    "success_criterion": "handoff_to_structured called with valid venue ID and party details",
+    "estimated_tool_calls": 1,
+    "depends_on": [
+      "sg_1"
+    ],
+    "assigned_half": "structured",
+    "status": "pending"
+  }
+]

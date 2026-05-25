@@ -1,0 +1,22 @@
+[
+  {
+    "id": "sg_1",
+    "description": "Retrieve venue_id from user input or existing data sources",
+    "success_criterion": "venue_id is present in the data",
+    "estimated_tool_calls": 1,
+    "depends_on": [],
+    "assigned_half": "loop",
+    "status": "pending"
+  },
+  {
+    "id": "sg_2",
+    "description": "Generate a new proposal with venue_id included to ensure normalization succeeds",
+    "success_criterion": "normalization process completes without errors",
+    "estimated_tool_calls": 1,
+    "depends_on": [
+      "sg_1"
+    ],
+    "assigned_half": "loop",
+    "status": "pending"
+  }
+]

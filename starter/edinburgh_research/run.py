@@ -25,13 +25,38 @@ from sovereign_agent._internal.llm_client import (
 )
 from sovereign_agent._internal.paths import example_sessions_dir
 from sovereign_agent.executor import DefaultExecutor
-from sovereign_agent.halves.loop import LoopHalf
 from sovereign_agent.planner import DefaultPlanner
 from sovereign_agent.session.directory import create_session
 from sovereign_agent.tickets.ticket import list_tickets
 
 from starter.edinburgh_research.integrity import clear_log, verify_dataflow
+from starter.edinburgh_research.stateful_loop import StatefulLoopHalf
 from starter.edinburgh_research.tools import build_tool_registry
+
+_EX5_TASK = (
+    "Research an Edinburgh pub and produce an HTML event flyer.\n\n"
+    "Context:\n"
+    "  - party size: 6\n"
+    "  - date: 2026-04-25 (a Saturday)\n"
+    "  - time: 19:30\n"
+    "  - area: near Haymarket station, Edinburgh\n\n"
+    "REQUIRED tool sequence (all four tools MUST run, in order):\n"
+    "  1. venue_search(near='Haymarket', party_size=6, budget_max_gbp=800)\n"
+    "  2. get_weather(city='edinburgh', date='2026-04-25')\n"
+    "  3. calculate_cost(venue_id=<chosen pub's id>, party_size=6,\n"
+    "                    duration_hours=3, catering_tier='bar_snacks')\n"
+    "  4. generate_flyer(event_details={...})  <-- MUST be called\n"
+    "  5. complete_task(result={'flyer': 'workspace/flyer.html', ...})\n\n"
+    "HARD RULES:\n"
+    "  - Do NOT call venue_search more than once.\n"
+    "  - Do NOT change party_size from 6.\n"
+    "  - Do NOT change area from Haymarket.\n\n"
+    "Do NOT call complete_task until you have called generate_flyer. "
+    "The scenario is graded by the existence of workspace/flyer.html, "
+    "not by your final text response. The flyer is HTML — exact tool "
+    "names and argument shapes are in each tool's docstring; call them "
+    "exactly as described."
+)
 
 
 def _build_fake_client() -> FakeLLMClient:
@@ -198,26 +223,7 @@ async def run_scenario(real: bool) -> int:
     with example_sessions_dir("ex5-edinburgh-research", persist=real) as sessions_root:
         session = create_session(
             scenario="edinburgh-research",
-            task=(
-                "Research an Edinburgh pub and produce an HTML event flyer.\n\n"
-                "Context:\n"
-                "  - party size: 6\n"
-                "  - date: 2026-04-25 (a Saturday)\n"
-                "  - time: 19:30\n"
-                "  - area: near Haymarket station, Edinburgh\n\n"
-                "REQUIRED tool sequence (all four tools MUST run, in order):\n"
-                "  1. venue_search(near='Haymarket', party_size=6, budget_max_gbp=800)\n"
-                "  2. get_weather(city='edinburgh', date='2026-04-25')\n"
-                "  3. calculate_cost(venue_id=<chosen pub's id>, party_size=6,\n"
-                "                    duration_hours=3, catering_tier='bar_snacks')\n"
-                "  4. generate_flyer(event_details={...})  <-- MUST be called\n"
-                "  5. complete_task(result={'flyer': 'workspace/flyer.html', ...})\n\n"
-                "Do NOT call complete_task until you have called generate_flyer. "
-                "The scenario is graded by the existence of workspace/flyer.html, "
-                "not by your final text response. The flyer is HTML — exact tool "
-                "names and argument shapes are in each tool's docstring; call them "
-                "exactly as described."
-            ),
+            task=_EX5_TASK,
             sessions_dir=sessions_root,
         )
         print(f"Session {session.session_id}")
@@ -242,12 +248,13 @@ async def run_scenario(real: bool) -> int:
             planner_model = executor_model = "fake"
 
         tools = build_tool_registry(session)
-        half = LoopHalf(
+        half = StatefulLoopHalf(
             planner=DefaultPlanner(model=planner_model, client=client),
             executor=DefaultExecutor(model=executor_model, client=client, tools=tools),  # type: ignore[arg-type]
+            task_constants=_EX5_TASK,
         )
 
-        result = await half.run(session, {"task": "research Edinburgh venue and write flyer"})
+        result = await half.run(session, {"task": _EX5_TASK})
         print(f"\nLoop half outcome: {result.next_action}")
         print(f"  summary: {result.summary}")
 

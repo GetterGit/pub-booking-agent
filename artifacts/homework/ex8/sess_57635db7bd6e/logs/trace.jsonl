@@ -1,0 +1,12 @@
+{"event_type": "voice.utterance_in", "actor": "user", "timestamp": "2026-05-24T20:18:56.817483+00:00", "payload": {"text": "Hello .", "turn": 0, "mode": "voice"}}
+{"event_type": "voice.utterance_out", "actor": "manager", "timestamp": "2026-05-24T20:18:57.415266+00:00", "payload": {"text": "What can I do for ye?", "turn": 0, "mode": "voice"}}
+{"event_type": "voice.utterance_in", "actor": "user", "timestamp": "2026-05-24T20:19:05.582236+00:00", "payload": {"text": "Book for 20 people .", "turn": 1, "mode": "voice"}}
+{"event_type": "voice.utterance_out", "actor": "manager", "timestamp": "2026-05-24T20:19:06.831925+00:00", "payload": {"text": "Too big for us, I'm afraid. Try The Royal Oak or Bennet's Bar.", "turn": 1, "mode": "voice"}}
+{"event_type": "voice.utterance_in", "actor": "user", "timestamp": "2026-05-24T20:19:16.030858+00:00", "payload": {"text": "Let's do it .", "turn": 2, "mode": "voice"}}
+{"event_type": "voice.utterance_out", "actor": "manager", "timestamp": "2026-05-24T20:19:16.558897+00:00", "payload": {"text": "Can't take a booking that large. Try The Royal Oak.", "turn": 2, "mode": "voice"}}
+{"event_type": "voice.utterance_in", "actor": "user", "timestamp": "2026-05-24T20:19:25.640740+00:00", "payload": {"text": "Let's do eight people .", "turn": 3, "mode": "voice"}}
+{"event_type": "voice.utterance_out", "actor": "manager", "timestamp": "2026-05-24T20:19:26.491735+00:00", "payload": {"text": "Aye, we can do that. I'll pencil you in. What's the contact number?", "turn": 3, "mode": "voice"}}
+{"event_type": "voice.utterance_in", "actor": "user", "timestamp": "2026-05-24T20:19:37.799814+00:00", "payload": {"text": "Uh , one one bam bam bam bam . Zero .", "turn": 4, "mode": "voice"}}
+{"event_type": "voice.utterance_out", "actor": "manager", "timestamp": "2026-05-24T20:19:40.039578+00:00", "payload": {"text": "Not a valid number, lad. Try again.", "turn": 4, "mode": "voice"}}
+{"event_type": "voice.utterance_in", "actor": "user", "timestamp": "2026-05-24T20:19:49.650769+00:00", "payload": {"text": "101101101 .", "turn": 5, "mode": "voice"}}
+{"event_type": "voice.utterance_out", "actor": "manager", "timestamp": "2026-05-24T20:19:50.218362+00:00", "payload": {"text": "Not a phone number. Give me a real one.", "turn": 5, "mode": "voice"}}

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "sg_1",
+    "description": "Search for a pub near Haymarket station for 6 people with max budget of \u00a3800.",
+    "success_criterion": "Venue ID is returned from the search.",
+    "estimated_tool_calls": 1,
+    "depends_on": [],
+    "assigned_half": "loop",
+    "status": "pending"
+  },
+  {
+    "id": "sg_2",
+    "description": "Check weather conditions for Edinburgh on 2026-04-25.",
+    "success_criterion": "Weather data for the specified date is retrieved.",
+    "estimated_tool_calls": 1,
+    "depends_on": [
+      "sg_1"
+    ],
+    "assigned_half": "loop",
+    "status": "pending"
+  },
+  {
+    "id": "sg_3",
+    "description": "Calculate total cost for the event at the chosen venue with 6 people, 3 hours duration, and bar snacks catering.",
+    "success_criterion": "Cost calculation returns a total amount.",
+    "estimated_tool_calls": 1,
+    "depends_on": [
+      "sg_1",
+      "sg_2"
+    ],
+    "assigned_half": "loop",
+    "status": "pending"
+  },
+  {
+    "id": "sg_4",
+    "description": "Generate HTML event flyer using event details including venue, weather, and cost.",
+    "success_criterion": "workspace/flyer.html file is created.",
+    "estimated_tool_calls": 1,
+    "depends_on": [
+      "sg_1",
+      "sg_2",
+      "sg_3"
+    ],
+    "assigned_half": "loop",
+    "status": "pending"
+  },
+  {
+    "id": "sg_5",
+    "description": "Finalize task by confirming flyer generation.",
+    "success_criterion": "complete_task is called with the correct result parameters.",
+    "estimated_tool_calls": 1,
+    "depends_on": [
+      "sg_4"
+    ],
+    "assigned_half": "loop",
+    "status": "pending"
+  }
+]

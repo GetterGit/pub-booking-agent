@@ -1,18 +1,18 @@
-"""Ex8 — voice loop (reference solution).
+"""Ex8 — voice loop.
 
 Two modes:
   * text mode: stdin → manager → stdout. Free, no mic needed.
   * voice mode: mic → Speechmatics realtime STT → manager →
-    Rime.ai Arcana TTS → speakers.
+    ElevenLabs REST TTS → speakers.
 
 Both modes write identical trace events so downstream grading
 doesn't care which ran.
 
 Voice mode degrades gracefully:
-  - No SPEECHMATICS_KEY        → text mode with warning
-  - No RIME_API_KEY            → voice STT, but manager replies printed not spoken
+  - No SPEECHMATICS_KEY         → text mode with warning
+  - No ELEVENLABS_API_KEY       → voice STT, but manager replies printed not spoken
   - speechmatics-python missing → text mode with install hint
-  - No mic / no playback       → attempted run; errors surface clearly
+  - No mic / no playback        → attempted run; errors surface clearly
 """
 
 from __future__ import annotations
@@ -85,7 +85,15 @@ async def run_voice_mode(session: Session, persona: ManagerPersona, max_turns: i
 
     # ── preflight: keys + deps ─────────────────────────────────────
     speechmatics_key = os.environ.get("SPEECHMATICS_KEY", "").strip()
-    rime_key = os.environ.get("RIME_API_KEY", "").strip()
+    elevenlabs_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+    # Optional overrides — default voice "George" (deep British male, fits
+    # the Alasdair MacLeod persona) and the multilingual_v2 model.
+    elevenlabs_voice_id = (
+        os.environ.get("ELEVENLABS_VOICE_ID", "").strip() or "JBFqnCBsd6RMkjVDRZzb"
+    )
+    elevenlabs_model_id = (
+        os.environ.get("ELEVENLABS_MODEL_ID", "").strip() or "eleven_multilingual_v2"
+    )
 
     if not speechmatics_key:
         print(
@@ -116,11 +124,11 @@ async def run_voice_mode(session: Session, persona: ManagerPersona, max_turns: i
         await run_text_mode(session, persona, max_turns=max_turns)
         return
 
-    # Rime is optional — we fall through to text-reply-only if missing
-    rime_enabled = bool(rime_key)
-    if not rime_enabled:
+    # ElevenLabs TTS is optional — we fall through to text-reply-only if missing.
+    tts_enabled = bool(elevenlabs_key)
+    if not tts_enabled:
         print(
-            "ℹ  RIME_API_KEY not set — manager replies will be printed, not spoken.",
+            "ℹ  ELEVENLABS_API_KEY not set — manager replies will be printed, not spoken.",
             file=sys.stderr,
         )
 
@@ -199,10 +207,16 @@ async def run_voice_mode(session: Session, persona: ManagerPersona, max_turns: i
             }
         )
 
-        # ── speak reply via Rime TTS (if enabled) ──────────────────
-        if rime_enabled:
+        # ── speak reply via ElevenLabs TTS (if enabled) ────────────
+        if tts_enabled:
             try:
-                await _speak_rime(manager_text, rime_key, sd)
+                await _speak_elevenlabs(
+                    manager_text,
+                    api_key=elevenlabs_key,
+                    voice_id=elevenlabs_voice_id,
+                    model_id=elevenlabs_model_id,
+                    sd=sd,
+                )
             except Exception as e:  # noqa: BLE001
                 print(f"   ⚠ TTS playback failed: {e} (continuing)", file=sys.stderr)
 
@@ -223,7 +237,7 @@ def _record_until_silence(sd, session: Session, turn: int) -> bytes:
     """
     import numpy as np
 
-    threshold = 500  # int16 RMS amplitude below which we call it silence
+    threshold = 250  # int16 RMS amplitude below which we call it silence
     chunk_ms = 100
     chunk_samples = int(SAMPLE_RATE * chunk_ms / 1000)
     silence_chunks_needed = int(SILENCE_TIMEOUT_S * 1000 / chunk_ms)
@@ -330,39 +344,62 @@ async def _transcribe_speechmatics(
     def _blocking_run():
         client.run_synchronously(stream, trans_config, audio_settings)
 
-    await asyncio.get_event_loop().run_in_executor(None, _blocking_run)
+    await asyncio.get_running_loop().run_in_executor(None, _blocking_run)
 
     return " ".join(transcripts).strip()
 
 
 # ---------------------------------------------------------------------------
-# Rime.ai Arcana TTS + playback
+# ElevenLabs TTS + playback
 # ---------------------------------------------------------------------------
-async def _speak_rime(text: str, api_key: str, sd) -> None:
-    """Call Rime.ai TTS, get MP3 back, play it."""
+async def _speak_elevenlabs(
+    text: str,
+    *,
+    api_key: str,
+    voice_id: str,
+    model_id: str,
+    sd,
+) -> None:
+    """Call ElevenLabs REST TTS, get MP3 back, decode + play it.
+
+    Endpoint contract (from elevenlabs.io/docs/api-reference/text-to-speech/convert):
+      POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}
+      Header: xi-api-key: <key>
+      Body:   {"text": "...", "model_id": "..."}
+      Query:  ?output_format=mp3_44100_128  (default)
+      Returns: raw audio bytes (octet-stream).
+    """
     import httpx
-    
-    url = "https://users.rime.ai/v1/rime-tts"
-    payload = {
-        "speaker": "luna",  # an Arcana voice; change if Rime renames
-        "text": text,
-        "modelId": "arcana",
-        "audioFormat": "mp3",
-    }
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    payload = {"text": text, "model_id": model_id}
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "xi-api-key": api_key,
         "Content-Type": "application/json",
-        "Accept": "audio/mp3",
+        "Accept": "audio/mpeg",
     }
+    params = {"output_format": "mp3_44100_128"}
 
-    # TODO: Make an async HTTP POST request using `httpx.AsyncClient` to `url` with `payload` as JSON and `headers`.
-    # Check for status_code == 200, and raise RuntimeError with the response text if it fails.
-    # Assign the raw bytes to `mp3_bytes`.
-    raise NotImplementedError("TODO: Implement async HTTP POST for Rime TTS")
-    
-    # mp3_bytes = <your variable>
+    async with httpx.AsyncClient(timeout=30.0) as http:
+        resp = await http.post(url, json=payload, headers=headers, params=params)
+    if resp.status_code != 200:
+        raise RuntimeError(f"ElevenLabs TTS failed: {resp.status_code} {resp.text[:200]}")
+    mp3_bytes = resp.content
 
-    # Decode MP3 → PCM via pydub (stdlib can't handle mp3)
+    # Decode MP3 → PCM via pydub (stdlib can't handle mp3). pydub shells
+    # out to ffmpeg/ffprobe, which aren't on macOS by default. The
+    # static-ffmpeg package ships venv-local binaries; add_paths()
+    # prepends them to PATH for this Python process only — no system
+    # pollution. First call downloads ~80MB (cached after).
+    try:
+        import static_ffmpeg  # type: ignore[import-not-found]
+
+        static_ffmpeg.add_paths()
+    except ImportError:
+        # static-ffmpeg missing — pydub will fall back to PATH lookup
+        # and fail with a clear error if ffmpeg isn't installed system-wide.
+        pass
+
     try:
         from io import BytesIO
 
