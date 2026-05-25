@@ -19,8 +19,3 @@ returned by any tool — it's a rule threshold, not data. I simplified
 the phrasing to "No deposit required for this booking." Without the
 integrity check this would have slipped past review because £300 looks
 like a reasonable number in the right context.
-
-## Citations
-
-- sessions/sess_*/logs/trace.jsonl — tool call sequence
-- sessions/sess_*/workspace/flyer.md — the produced flyer
